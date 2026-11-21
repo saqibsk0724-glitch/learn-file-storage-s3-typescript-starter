@@ -5,6 +5,7 @@ import { getVideo, updateVideo } from "../db/videos";
 import type { ApiConfig } from "../config";
 import type { BunRequest } from "bun";
 import {join} from "path";
+import { randomBytes } from "crypto";
 import {
   BadRequestError,
   NotFoundError,
@@ -40,6 +41,11 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
     throw new BadRequestError("Thumbnail file too large");
   }
 
+  // Allow only JPEG and PNG images
+if (file.type !== "image/jpeg" && file.type !== "image/png") {
+  throw new BadRequestError("Invalid thumbnail file type");
+}
+
   // Get the file extension from its media type
   const fileExtension = file.type.split("/")[1];
 
@@ -60,8 +66,9 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
   }
 
   // Create the file path
-  const fileName = `${videoId}.${fileExtension}`;
-  const filePath = join(cfg.assetsRoot, fileName);
+ const randomName = randomBytes(32).toString("base64url");
+ const fileName = `${randomName}.${fileExtension}`;
+ const filePath = join(cfg.assetsRoot, fileName);
 
   // Read and save the image to disk
   const data = await file.arrayBuffer();
