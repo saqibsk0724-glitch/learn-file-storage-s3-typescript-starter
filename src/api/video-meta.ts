@@ -5,6 +5,7 @@ import { respondWithJSON } from "./json";
 import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 import type { BunRequest } from "bun";
 
+
 export async function handlerVideoMetaCreate(cfg: ApiConfig, req: Request) {
   const token = getBearerToken(req.headers);
   const userID = validateJWT(token, cfg.jwtSecret);
@@ -46,22 +47,31 @@ export async function handlerVideoMetaDelete(cfg: ApiConfig, req: BunRequest) {
 
 export async function handlerVideoGet(cfg: ApiConfig, req: BunRequest) {
   const { videoId } = req.params as { videoId?: string };
+
   if (!videoId) {
     throw new BadRequestError("Invalid video ID");
   }
 
+  const token = getBearerToken(req.headers);
+  const userID = validateJWT(token, cfg.jwtSecret);
+
   const video = getVideo(cfg.db, videoId);
+
   if (!video) {
     throw new NotFoundError("Couldn't find video");
   }
 
+  if (video.userID !== userID) {
+    throw new UserForbiddenError("Not authorized");
+  }
+
   return respondWithJSON(200, video);
 }
-
 export async function handlerVideosRetrieve(cfg: ApiConfig, req: Request) {
   const token = getBearerToken(req.headers);
   const userID = validateJWT(token, cfg.jwtSecret);
 
   const videos = getVideos(cfg.db, userID);
+
   return respondWithJSON(200, videos);
 }

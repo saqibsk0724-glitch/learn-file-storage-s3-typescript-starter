@@ -1,9 +1,12 @@
 
 import { getBearerToken, validateJWT } from "../auth";
 import { respondWithJSON } from "./json";
-import { getVideo, updateVideo } from "../db/videos";
+import { getVideo,  updateVideo } from "../db/videos";
+
 import type { ApiConfig } from "../config";
 import type { BunRequest } from "bun";
+
+
 import {
   BadRequestError,
   NotFoundError,
@@ -13,6 +16,13 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { unlink } from "fs/promises";
+
+
+
+
+
+
+
 
 export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   // 1. Get the video ID from the URL
@@ -82,8 +92,8 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
     // 11. Upload the temporary file to S3
     await s3File.write(Bun.file(processedFilePath));
 
-    // 12. Generate the S3 URL
-    video.videoURL = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${key}`;
+    // 12. Store the S3 object key
+    video.videoURL = `${cfg.s3CfDistribution}/${key}`;
 
     // 13. Update the database
     updateVideo(cfg.db, video);
@@ -91,6 +101,7 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
     return respondWithJSON(200, video);
   } finally {
     // 14. Remove the temporary file
+    await unlink(`${tempFilePath}.processed`).catch(() => {});
     await unlink(tempFilePath).catch(() => {});
   }
 }
@@ -174,3 +185,4 @@ async function processVideoForFastStart(
 
   return outputFilePath;
 }
+
